@@ -11,6 +11,8 @@ from flask import (
     jsonify,
 )
 
+from flask.views import MethodView
+
 from flask_jwt_extended import (
     jwt_required,
     create_access_token,
@@ -31,7 +33,8 @@ from models.models import (
     Provincia, 
     Localidad, 
     Personas,
-    )
+)
+
 from schemas.schema import (
     UsuarioAdminSchema,
     UsuarioBasicSchema,
@@ -39,6 +42,44 @@ from schemas.schema import (
     ProvinciaBasicSchema,
     LocalidadBasicSchema,
 )
+
+class PaisAPI(MethodView):
+    def get(self, pais_id=None):
+        if pais_id == None:
+            paises = Paises.query.all()
+            paises_schema = PaisBasicSchema().dump(paises, many=True)
+        else:
+            paises = Paises.query.get(pais_id)
+            paises_schema = PaisBasicSchema().dump(paises)
+        return jsonify(paises_schema)
+
+    def post(self): # valida si la información enviada "cabe" en el Schema
+        pais_json = PaisBasicSchema().load(request.json)
+        nombre = pais_json.get('nombre')
+        nuevo_pais = Paises(nombre=nombre)
+                    # Paises(**pais_json)
+
+        db.session.add(nuevo_pais)
+        db.session.commit()
+
+        return jsonify(Mensaje='PETODO GOST')
+    
+    def put(self, pais_id):
+        pais = Paises.query.get(pais_id)
+        pais_json = PaisBasicSchema().load(request.json)
+        nombre = pais_json.get('nombre')
+        pais.nombre = nombre
+        db.session.commit()
+        return jsonify(PaisBasicSchema().dump(pais))
+    
+    def delete(self, pais_id):
+        pais = Paises.query.get(pais_id)
+        pais.delete()
+        db.session.commit()
+        return jsonify(Mensaje=f"BORRADO {pais_id}")
+
+app.add_url_rule('/pais', view_func=PaisAPI.as_view('pais'))
+app.add_url_rule('/pais/<pais_id>', view_func=PaisAPI.as_view('pais_por_id'))
 
 
 @app.route('/users', methods=['POST'])
@@ -128,27 +169,6 @@ def login():
             return jsonify({'ok':access_token})
         return jsonify(Error="No pude generar el token")
 
-
-@app.route("/agregar_pais", methods=['POST'])
-def nuevo_pais():
-    if request.method=="POST":
-        nombre_pais = request.form['nombre']
-
-        nuevo_pais = Paises(nombre=nombre_pais)
-
-        db.session.add(nuevo_pais)
-        db.session.commit()
-
-        return redirect(url_for('index'))
-    
-@app.route("/borrar_pais/<id>")
-def borrar_pais(id):
-    
-    pais = Paises.query.get(id)
-    db.session.delete(pais)
-    db.session.commit()
-
-    return redirect(url_for('index'))
 
 @app.route("/ruta_restringida")
 @jwt_required()

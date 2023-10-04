@@ -1,13 +1,32 @@
-version: 3
+version: '3'
 services:
   alchemy:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     ports:
       - "5005:5005"
-    restart: always
+    # restart: always
     volumes:
       - .:/alchemy
-    
+    env_file:
+      - .env
+    depends_on:
+      - app-db
+    container_name: mainapp
 
+  app-db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: alchemy_b
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    container_name: mysql_database
+
+volumes:
+  mysql_data:
